@@ -1,0 +1,9 @@
+{
+  "name": "marvell-ai-demand",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Public-source AI infrastructure demand scenario model",
+  "scripts": {
+    "test": "node tests/aws-model.test.cjs"
+  }
+}
