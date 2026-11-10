@@ -1,6 +1,6 @@
 (function (root) {
   'use strict';
-  const defaults = Object.freeze({gpuPlan:2000000, realization:100, gpuPerServer:8, linksPerServer:4, optical:100, dspFraction:100, dspPerModule:1, share:50, asp:100, periodFraction:50, spare:2, opening:30000, closing:20000, committed:10000, leadWeeks:26, targetDate:'2027-12-31', qualification:'unverified'});
+  const defaults = Object.freeze({gpuPlan:2000000, realization:100, gpuPerServer:8, linksPerServer:4, optical:100, dspFraction:100, dspPerModule:1, share:70, asp:100, periodFraction:50, spare:2, opening:30000, closing:20000, committed:10000, leadWeeks:26, targetDate:'2027-12-31', qualification:'unverified'});
   const percent = ['realization','optical','dspFraction','share','periodFraction','spare'];
   const whole = {gpuPlan:[0,100000000],gpuPerServer:[1,1024],linksPerServer:[0,1024],dspPerModule:[0,16],opening:[0,1e12],closing:[0,1e12],committed:[0,1e12],leadWeeks:[0,520]};
   function calculate(v) {
