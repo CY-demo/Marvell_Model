@@ -19,3 +19,6 @@ for(const [key,[min,max]] of Object.entries(bounds)){for(const value of [NaN,Inf
 for(let n=0;n<100;n++){const p={...defaults,growth:n,share:n,realization:n};const r=calculate(p);assert.ok(r.supplier<=r.dsp && r.dsp<=r.optics && r.optics<=r.equipment && r.equipment<=r.ai && r.ai<=r.delta);assert.ok(r.purchases>=0 && r.periodUnits<=r.units);checks+=2;}
 assert.deepEqual(defaults,{base:100,growth:20,ai:60,equipment:70,optics:5,dsp:10,share:50,asp:80,realization:50,inventory:10000});checks++;
 console.log(`Capex model: ${checks} assertions passed`);
+
+// Verify the two-period architecture and supplier-allocation analysis.
+require('./capex-analysis.test.cjs');
