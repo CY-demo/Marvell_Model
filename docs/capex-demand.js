@@ -59,22 +59,81 @@ const groups=[
  ['aecCost','AEC 線纜採購價','AEC cable cost','USD','含兩端 DSP 的工程值。','Engineering estimate including both DSPs.']]}
 ];
 const fields=groups.flatMap(g=>g.keys);
+const coreKeys=['volume','dc','it','accelerated','gpuMix','gpuCost','asicCost'];
+const drafts={};
+function inputControl(key,id){
+ const field=fields.find(x=>x[0]===key),unit=field[3];
+ return key==='edgeGbps'?'<select id="'+id+'" data-key="'+key+'">'+[400,800,1600].map(v=>'<option'+(p[key]===v?' selected':'')+' value="'+v+'">'+v+'</option>').join('')+'</select>':'<input id="'+id+'" data-key="'+key+'" type="number" min="'+(['gpuCost','asicCost','cpuCost','switchUtil'].includes(key)?'0.01':'0')+'"'+(unit==='%'?' max="100"':'')+' step="any" value="'+(Number.isFinite(p[key])?p[key]:'')+'">';
+}
+function resetControl(key){
+ const field=fields.find(x=>x[0]===key),base=M.companies[company].p[key];
+ return '<button class="field-reset" type="button" data-reset-key="'+key+'" aria-label="'+t(field[1]+'：還原公司基準',field[2]+': restore company base')+'">'+t('還原基準 ','Restore ')+f(base,2)+(field[3]==='%'?'%':'')+'</button>';
+}
 function makeInputs(){
  const opens=[...document.querySelectorAll('#inputs details')].map(e=>e.open);
- $('inputs').innerHTML=groups.map((g,i)=>'<details'+((opens.length?opens[i]:i===0)?' open':'')+'><summary>'+t(...g.name)+'<span>'+t('推估假設 · 可調整','Estimated inputs · editable')+'</span></summary><div class="fields">'+g.keys.map(([key,zh,en,unit,whyZh,whyEn])=>'<div class="field"><label for="p-'+key+'">'+t(zh,en)+' · '+unit+'</label>'+(key==='edgeGbps'?'<select id="p-'+key+'" data-key="'+key+'">'+[400,800,1600].map(v=>'<option'+(p[key]===v?' selected':'')+' value="'+v+'">'+v+'</option>').join('')+'</select>':'<input id="p-'+key+'" data-key="'+key+'" type="number" min="'+(['gpuCost','asicCost','cpuCost','switchUtil'].includes(key)?'0.01':'0')+'"'+(unit==='%'?' max="100"':'')+' step="any" value="'+(Number.isFinite(p[key])?p[key]:'')+'">')+'<small>'+t(whyZh,whyEn)+'</small></div>').join('')+'</div></details>').join('');
- document.querySelectorAll('[data-key]').forEach(e=>e.addEventListener('input',()=>{p[e.dataset.key]=e.value===''?NaN:Number(e.value);e.classList.toggle('edited',p[e.dataset.key]!==M.companies[company].p[e.dataset.key]);renderResults();}));
+ $('inputs').innerHTML=groups.map((g,i)=>{
+  const keys=g.keys.filter(x=>!$('workbench')||!coreKeys.includes(x[0]));
+  return '<details id="group-'+i+'"'+((opens.length?opens[i]:!$('workbench')&&i===0)?' open':'')+'><summary>'+t(...g.name)+'<span>'+t('推估假設 · 可調整','Estimated inputs · editable')+'</span></summary><div class="fields">'+keys.map(([key,zh,en,unit,whyZh,whyEn])=>'<div class="field"><label for="p-'+key+'">'+t(zh,en)+' · '+unit+'</label>'+inputControl(key,'p-'+key)+resetControl(key)+'<small>'+t(whyZh,whyEn)+'</small></div>').join('')+'</div></details>';
+ }).join('');
+}
+function makeWorkbench(){
+ if(!$('workbench'))return;
+ const c=M.companies[company];
+ const reasons={
+ volume:[t('把 CapEx 增額分配到採購量；其餘配置成本與支出組合。AWS 基準採 50%，其他公司採 100%。','Allocate the increase to hardware volume; the remainder funds cost and spending mix. AWS starts at 50%, other companies at 100%.'),company==='amazon'?'awsPace':c.source],
+ dc:[t(...c.dcWhy),c.source],
+ it:[t('設備包含伺服器、網路與儲存。Alphabet 以 65% 設備配置為錨點；Microsoft 以 75% 全公司設備配置 ÷ 95% 資料中心配置換算約 79%；AWS／Meta 採 70% 同業參考值。','Equipment covers servers, networking and storage. Alphabet anchors 65%; Microsoft normalizes 75% company capex by 95% datacenter share to about 79%; AWS / Meta use a 70% peer-informed estimate.'),company==='microsoft'?'msft':'google'],
+ accelerated:[t('IT 設備預算中，加速運算基準 60%、網路 15%、儲存 5%，CPU 伺服器取得餘額。','Within equipment: accelerated systems start at 60%, networking at 15%, storage at 5%; CPU servers receive the remainder.'),null],
+ gpuMix:[t(...c.mixWhy),c.hardware],
+ gpuCost:[t('8-GPU B300 整機參考價 $646,878，折合每 GPU 約 $80,860。規模採購與配置調整係數採 0.74，基準約 $60,000／GPU。','An eight-GPU B300 system reference of $646,878 gives about $80,860 per GPU. A 0.74 procurement/configuration factor anchors the $60,000 base.'),'gpuPrice'],
+ asicCost:[t(...c.asicWhy),c.hardware]};
+ $('workbench').innerHTML='<div class="work-heading"><div><h2>'+t('看著公式，直接改假設','Follow the formula. Edit each assumption.')+'</h2><p>'+t('白色數字欄可直接輸入。每列右側顯示運算與結果；「還原基準」恢復單項設定。','Type directly into the white number fields. Each row shows the calculation and output. Restore resets one assumption.')+'</p></div><a href="#assumptions">'+t('網路、市佔率與其他參數 ↓','Network, market share and other inputs ↓')+'</a></div><div id="capex-entry" class="capex-entry"></div><div id="live-results" class="live-results" aria-live="polite"></div><div id="work-error" class="work-error" role="status" hidden></div><div class="step-grid-labels"><span>'+t('推算順序與假設依據','Step and rationale')+'</span><span>'+t('你的假設','Your input')+'</span><span>'+t('即時運算結果','Live calculation')+'</span></div><div class="step-rows">'+coreKeys.map((key)=>{
+ const field=fields.find(x=>x[0]===key),why=reasons[key];
+ return '<div class="step-row" id="step-'+key+'"><div class="step-description"><label for="work-'+key+'">'+t(field[1],field[2])+'</label><p>'+t(field[4],field[5])+'</p><details class="step-source"><summary>'+t('基準值怎麼來','Why this base value')+'</summary><p>'+why[0]+(why[1]?' '+link(why[1],t('查看來源','Source')):'')+'</p></details></div><div class="step-input"><span class="unit">'+field[3]+'</span>'+inputControl(key,'work-'+key)+resetControl(key)+'</div><div class="step-result"><span id="formula-'+key+'"></span><strong id="output-'+key+'"></strong></div></div>';
+ }).join('')+'</div><div class="equation-box"><h3>'+t('把整條 GPU 公式接起來','The complete GPU equation')+'</h3><div id="gpu-equation"></div></div><div class="comparison-heading"><h3>'+t('公司基準 vs. 你的試算','Company base vs. your scenario')+'</h3><span id="changes-count"></span></div><div id="base-comparison"></div><div id="changed-inputs" class="changed-inputs"></div>';
+}
+function updateWorkbench(r){
+ if(!$('workbench'))return;
+ const c=M.companies[company],b=M.estimate(c.p,mode),annual=mode==='annual',unit=t(' 顆',' units');
+ $('work-error').hidden=true;
+ $('capex-entry').textContent=(annual?t('全年預算 = ','Annual budget = ')+compact(p.next*1e9):t('CapEx 增額 = ','Capex increase = ')+compact(p.next*1e9)+' − '+compact(p.old*1e9)+' = '+compact(r.headline*1e9))+' · '+t('B = 10 億美元；M = 100 萬美元','B = billion USD; M = million USD');
+ $('step-volume').hidden=annual;
+ const steps={
+ volume:[compact(r.headline*1e9)+' × '+f(p.volume,2)+'%',compact(r.effective*1e9)],
+ dc:[compact(r.effective*1e9)+' × '+f(p.dc,2)+'%',compact(r.dc)],
+ it:[compact(r.dc)+' × '+f(p.it,2)+'%',compact(r.it)],
+ accelerated:[compact(r.it)+' × '+f(p.accelerated,2)+'%',compact(r.acc)],
+ gpuMix:[compact(r.acc)+' × '+f(p.gpuMix,2)+'%',t('GPU 預算 ','GPU budget ')+money(r.gpuBudget)],
+ gpuCost:[money(r.gpuBudget)+' ÷ '+money(p.gpuCost),f(r.gpu)+unit],
+ asicCost:[money(r.acc)+' × '+f(100-p.gpuMix,2)+'% ÷ '+money(p.asicCost),f(r.asic)+unit]};
+ for(const [key,[formula,result]] of Object.entries(steps)){$('formula-'+key).textContent=formula;$('output-'+key).textContent=result;}
+ const delta=(x,y)=>{const d=Math.round(x)-Math.round(y);return(d>0?'+':'')+f(d);};
+ const valueDelta=(r.value>b.value?'+':'')+compact(r.value-b.value);
+ $('live-results').innerHTML='<div><span>'+t('你的 GPU 推估','Your GPU estimate')+'</span><strong>'+f(r.gpu)+unit+'</strong><small>'+t('較公司基準 ','vs. company base ')+delta(r.gpu,b.gpu)+unit+'</small></div><div><span>'+c.custom+'</span><strong>'+f(r.asic)+unit+'</strong><small>'+t('較公司基準 ','vs. company base ')+delta(r.asic,b.asic)+unit+'</small></div><div><span>'+t('Marvell 晶片金額','Marvell silicon value')+'</span><strong>'+compact(r.value)+'</strong><small>'+t('較公司基準 ','vs. company base ')+valueDelta+'</small></div>';
+ const factors=[money(r.headline*1e9),...(annual?[]:[f(p.volume,2)+'%']),f(p.dc,2)+'%',f(p.it,2)+'%',f(p.accelerated,2)+'%',f(p.gpuMix,2)+'%'];
+ $('gpu-equation').innerHTML='<p>'+t('預算 → 實體採購 → 資料中心 → IT 設備 → 加速運算 → GPU 預算 → GPU 顆數','Budget → hardware volume → datacenter → equipment → accelerated systems → GPU budget → GPU units')+'</p><strong>'+factors.join(' × ')+' ÷ '+money(p.gpuCost)+' = '+f(r.gpu)+unit+'</strong>';
+ const changes=Object.keys(c.p).filter(k=>p[k]!==c.p[k]);
+ $('changes-count').textContent=changes.length?t('已調整 ','Edited ')+changes.length+t(' 項',' inputs'):t('使用公司基準','Using company base');
+ $('base-comparison').innerHTML=table([t('產品','Product'),t('公司基準','Company base'),t('你的試算','Your scenario'),t('差額','Change')],[['GPU',f(b.gpu),f(r.gpu),delta(r.gpu,b.gpu)],[c.custom,f(b.asic),f(r.asic),delta(r.asic,b.asic)],[t('Marvell 晶片金額','Marvell silicon value'),compact(b.value),compact(r.value),valueDelta]],'narrow');
+ $('changed-inputs').innerHTML=changes.map(key=>{const field=fields.find(x=>x[0]===key),label=field?t(field[1],field[2]):t(...copy[key]);return '<span>'+label+': '+f(c.p[key],2)+' → <b>'+f(p[key],2)+'</b></span>';}).join('');
+ document.querySelectorAll('[data-key]').forEach(e=>e.classList.toggle('edited',p[e.dataset.key]!==c.p[e.dataset.key]));
+ document.querySelectorAll('[data-reset-key]').forEach(e=>e.disabled=p[e.dataset.resetKey]===c.p[e.dataset.resetKey]);
+}
+function syncInput(key){
+ document.querySelectorAll('[data-key="'+key+'"]').forEach(e=>e.value=Number.isFinite(p[key])?p[key]:'');
+ if(key==='old'||key==='next')$(key).value=p[key];
 }
 function language(){
  document.documentElement.lang=lang==='en'?'en':'zh-Hant';
  document.querySelectorAll('[data-t]').forEach(e=>e.textContent=t(...copy[e.dataset.t]));
  document.querySelectorAll('[data-lang]').forEach(e=>e.setAttribute('aria-pressed',String(e.dataset.lang===lang)));
  $('scope').options[0].text=t('CapEx 增額','Capex increase');$('scope').options[1].text=t('最新全年預算','Latest annual budget');
- makeInputs();renderResults();
+ makeInputs();makeWorkbench();renderResults();
 }
 function renderResults(){
  const c=M.companies[company],annual=mode==='annual';
- $('context').innerHTML=t(...c.compare)+' · '+t(...c.basis)+' · '+link(c.baseSource,t('基準來源','Baseline source'))+' '+link(c.source,t('最新來源','Latest source'))+' <a href="#assumptions">'+t('調整推估假設 ↓','Edit assumptions ↓')+'</a>';
- let r;try{r=M.estimate(p,mode);$('error').hidden=true;$('results').hidden=false;}catch(e){$('error').hidden=false;$('results').hidden=true;const field=fields.find(x=>x[0]===e.message);$('error').textContent=e.message==='allocation'?t('請將加速運算、網路、儲存三項配置合計調整至 100% 以內。','Set accelerated, networking and storage allocations to a combined 100% or less.'):t('請填入有效數值：','Enter a valid value: ')+(field?t(field[1],field[2]):e.message);return;}
+ $('context').innerHTML=t(...c.compare)+' · '+t(...c.basis)+' · '+link(c.baseSource,t('基準來源','Baseline source'))+' '+link(c.source,t('最新來源','Latest source'))+' <a href="'+($('workbench')?'#workbench':'#assumptions')+'">'+t('調整推估假設 ↓','Edit assumptions ↓')+'</a>';
+ let r;try{r=M.estimate(p,mode);$('error').hidden=true;$('results').hidden=false;$('results').dataset.valid='true';}catch(e){$('error').hidden=false;$('results').hidden=!$('workbench');$('results').dataset.valid='false';const field=fields.find(x=>x[0]===e.message);$('error').textContent=e.message==='allocation'?t('請將加速運算、網路、儲存三項配置合計調整至 100% 以內。','Set accelerated, networking and storage allocations to a combined 100% or less.'):t('請填入有效數值：','Enter a valid value: ')+(field?t(field[1],field[2]):e.message);if($('workbench')){$('work-error').hidden=false;$('work-error').textContent=$('error').textContent;$('live-results').textContent=t('調整數值後繼續試算','Update the input to continue');coreKeys.forEach(k=>{$('formula-'+k).textContent='';$('output-'+k).textContent='—';});$('gpu-equation').textContent='—';$('base-comparison').textContent='—';$('changes-count').textContent='';$('changed-inputs').textContent='';document.querySelectorAll('[data-reset-key]').forEach(x=>x.disabled=p[x.dataset.resetKey]===c.p[x.dataset.resetKey]);}return;}updateWorkbench(r);
  const scope=t(annual?'全年預算支應':'增額支應',annual?'Funded by annual budget':'Funded by the increase');
  $('headline').innerHTML='<div class="metric"><label>'+t('GPU 需求推估 · B300 級平台','Estimated GPU demand · B300-class')+'</label><strong>'+f(r.gpu)+' '+t('顆','GPUs')+'</strong><p>'+scope+' · '+t('約','about')+' '+f(r.gpuServers)+' '+t('台 8-GPU 伺服器','eight-GPU server equivalents')+'</p></div><div class="metric"><label>'+c.custom+' '+t('需求推估','estimated demand')+'</label><strong>'+f(r.asic)+' '+t('顆','chips')+'</strong><p>'+t('平台成本','Platform cost')+' '+money(p.asicCost)+' / '+t('顆','chip')+'</p></div><div class="metric"><label>'+t('Marvell 晶片機會金額','Marvell silicon opportunity')+'</label><strong>'+compact(r.value)+'</strong><p>'+t('依產品份額與 ASP 加總','Sum of product allocation × ASP')+'</p></div>';
  const budgets=[[t('加速運算平台','Accelerated systems'),r.acc],[t('CPU 伺服器','CPU servers'),r.cpu],[t('外部網路','External networking'),r.net],[t('獨立儲存','External storage'),r.storage]];
@@ -89,7 +148,7 @@ function renderResults(){
  ['GPU '+t('預算','budget'),compact(r.acc)+' × '+f(p.gpuMix)+'%',compact(r.gpuBudget)],
  ['GPU '+t('顆數','units'),compact(r.gpuBudget)+' ÷ '+money(p.gpuCost),f(r.gpu)],
  [c.custom+' '+t('顆數','units'),compact(r.asicBudget)+' ÷ '+money(p.asicCost),f(r.asic)]];
- $('calculation').innerHTML=table([t('項目','Item'),t('運算','Calculation'),t('結果','Result')],calc,'narrow');
+ if($('calculation'))$('calculation').innerHTML=table([t('項目','Item'),t('運算','Calculation'),t('結果','Result')],calc,'narrow');
  $('hardware').innerHTML=table([t('產品','Product'),t('預算','Budget'),t('推估採購量','Estimated purchases')],[
  ['GPU',compact(r.gpuBudget),f(r.gpu)+' '+t('顆','units')],[c.custom,compact(r.asicBudget),f(r.asic)+' '+t('顆','units')],[t('8-GPU 伺服器等效量','Eight-GPU server equivalents'),t('GPU 平台內','Within GPU budget'),f(r.gpuServers)+' '+t('台','systems')],[t('CPU 伺服器','CPU servers'),compact(r.cpu),f(r.cpuServers)+' '+t('台','systems')],[t('外部網路','External networking'),compact(r.net),t('依下方拓樸展開','Expanded below')],[t('獨立儲存','External storage'),compact(r.storage),t('預算池','Budget pool')]],'narrow')+'<p class="micro">'+t('成本與支出組合調整配置','Allocation to cost and spending-mix changes')+' '+compact(r.costAllocation)+'</p>';
  $('networkFlow').innerHTML='<div class="flow-grid"><div><h3>'+t('加速器對外頻寬','Accelerator-facing bandwidth')+'</h3><strong>'+f(r.bw/1000,1)+' Tbps</strong><p>'+f(r.gpu)+' × '+f(p.gpuGbps)+' + '+f(r.asic)+' × '+f(p.asicGbps)+' Gbps</p></div><div><h3>'+t('伺服器 → Leaf','Server → leaf')+'</h3><strong>'+f(r.edgeLinks)+' '+t('等效連線','equivalent links')+'</strong><p>'+f(p.edgeGbps)+'G '+t('埠容量；光學','ports; optical')+' '+f(p.edgeOptical)+'%，AEC '+f((100-p.edgeOptical)*p.aecAttach/100,1)+'%</p></div><div><h3>'+t('Leaf → Spine','Leaf → spine')+'</h3><strong>'+f(r.upBw/1000,1)+' Tbps</strong><p>'+t('上行／下行','Uplink / downlink')+' '+f(p.uplink)+'%；1.6T '+t('頻寬占比','bandwidth share')+' '+f(p.up1600)+'%</p></div></div>'+table([t('產品需求','Product demand'),t('計算方式','Calculation'),t('數量','Quantity')],[
@@ -105,7 +164,7 @@ function renderResults(){
  if(company==='amazon')checks.push([t('AWS 部署速率年化','AWS annualized installation pace'),f(pace)+' '+t('顆／年','chips/year'),t('官方每 14 秒安裝 1 顆，換算 365 天速率。模型全年 GPU＋Trainium 為 ','Official pace: one chip every 14 seconds, annualized over 365 days. Modeled annual GPU + Trainium: ')+f(annualR.gpu+annualR.asic)+'；'+t('量級比 ','scale ratio ')+f((annualR.gpu+annualR.asic)/pace,2)+'×。 '+link('awsPace',t('來源','Source'))]);
  else checks.push([t('GPU 系統成本錨點','GPU system cost anchor'),money(646878/8)+' / GPU',t('Broadberry B300 整機 $646,878／8 顆；本模型採 ','Broadberry B300 system: $646,878 / 8 GPUs; model uses ')+money(p.gpuCost)+'，'+f(p.gpuCost/(646878/8)*100,1)+'% '+t('公開整機參考值。','of the public system reference.')+' '+link('gpuPrice',t('來源','Source'))]);
  $('crossChecks').innerHTML='<div class="table-wrap"><table><thead><tr><th>'+t('檢核','Check')+'</th><th class="num">'+t('數值','Value')+'</th><th>'+t('如何使用','Interpretation')+'</th></tr></thead><tbody>'+checks.map(row=>'<tr><td>'+row[0]+'</td><td class="num">'+row[1]+'</td><td>'+row[2]+'</td></tr>').join('')+'</tbody></table></div>'+(r.networkHeadroom<0?'<p class="attention">'+t('網路配置需增加 ','Add ')+compact(Math.abs(r.networkHeadroom))+t('，或調整模組成本、上行頻寬與光學比例。',' to network allocation, or adjust module costs, uplink bandwidth and optical mix.')+'</p>':'');
- renderEvidence(c);renderSensitivity(r);
+ if($('workbench')){$('networkFlow').insertAdjacentHTML('beforeend','<button type="button" data-open-assumptions="2">'+t('修改頻寬、連線與光學比例','Edit bandwidth, links and optical mix')+'</button>');$('products').insertAdjacentHTML('beforeend','<p class="worked-example">800G DSP: '+f(r.module800,3)+' × '+f(p.dspAttach,2)+'% × '+f(p.opticalShare,2)+'% = '+f(r.products[1].units)+' '+t('顆','units')+'</p><button type="button" data-open-assumptions="2,3">'+t('修改 DSP 採用率、市佔率與單價','Edit DSP attach rate, supplier share and ASP')+'</button>');}renderEvidence(c);renderSensitivity(r);
 }
 function renderEvidence(c){
  const rows=[
@@ -131,11 +190,13 @@ function renderSensitivity(r){
  ['GPU',...cases.map(x=>f(x.gpu))],[M.companies[company].custom,...cases.map(x=>f(x.asic))],[t('光模組','Optical modules'),...cases.map(x=>f(x.modules))],[t('Marvell 晶片金額','Marvell silicon value'),...cases.map(x=>compact(x.value))]])+'<h3 style="margin-top:24px">'+t('GPU 預算占比 × 每 GPU 平台成本','GPU budget mix × platform cost per GPU')+'</h3>'+table([t('GPU 預算比重','GPU budget share'),money(p.gpuCost*.8),money(p.gpuCost),money(p.gpuCost*1.2)],[Math.max(0,p.gpuMix-15),p.gpuMix,Math.min(100,p.gpuMix+15)].map(m=>[f(m)+'%',...[.8,1,1.2].map(k=>f(r.acc*m/100/(p.gpuCost*k)))]))+'<p class="micro">'+t('每格為 GPU 顆數；加速運算總預算保持 ','Cells show GPU units with accelerated spending held at ')+compact(r.acc)+'.</p>'+(mode==='increment'?'<h3>'+t('CapEx 增額的實體採購配置','Hardware-volume share of the capex increase')+'</h3>'+table([t('實體採購占增額','Volume share of increase'),'GPU',M.companies[company].custom],[25,50,75,100].map(v=>{const x=M.estimate({...p,volume:v},mode);return[f(v)+'%',f(x.gpu),f(x.asic)];})): '');
 }
 $('company').innerHTML=Object.entries(M.companies).map(([key,c])=>'<option value="'+key+'">'+c.name+'</option>').join('');
-function loadCompany(){p={...M.companies[company].p};$('old').value=p.old;$('next').value=p.next;makeInputs();renderResults();}
-$('company').addEventListener('change',()=>{company=$('company').value;loadCompany();});
+function loadCompany(useDraft=false){p={...(useDraft&&drafts[company]?drafts[company]:M.companies[company].p)};$('old').value=p.old;$('next').value=p.next;makeInputs();makeWorkbench();renderResults();}
+$('company').addEventListener('change',()=>{drafts[company]={...p};company=$('company').value;loadCompany(true);});
 $('scope').addEventListener('change',()=>{mode=$('scope').value;renderResults();});
 ['old','next'].forEach(key=>$(key).addEventListener('input',()=>{p[key]=$(key).value===''?NaN:Number($(key).value);renderResults();}));
-$('reset').addEventListener('click',loadCompany);
+$('reset').addEventListener('click',()=>{delete drafts[company];loadCompany();});
+document.addEventListener('input',e=>{const key=e.target.dataset.key;if(!key)return;p[key]=e.target.value===''?NaN:Number(e.target.value);renderResults();});
+document.addEventListener('click',e=>{const reset=e.target.closest('[data-reset-key]');if(reset){const key=reset.dataset.resetKey;p[key]=M.companies[company].p[key];syncInput(key);renderResults();}const open=e.target.closest('[data-open-assumptions]');if(open){const ids=open.dataset.openAssumptions.split(',');ids.forEach(i=>$('group-'+i).open=true);$('group-'+ids[0]).scrollIntoView({block:'start',behavior:'smooth'});}});
 document.querySelectorAll('[data-lang]').forEach(b=>b.addEventListener('click',()=>{lang=b.dataset.lang;language();}));
 document.querySelectorAll('[data-panel]').forEach(b=>b.addEventListener('click',()=>{active=b.dataset.panel;document.querySelectorAll('[data-panel]').forEach(x=>x.setAttribute('aria-selected',String(x===b)));['model','evidence','sensitivity'].forEach(id=>$('panel-'+id).hidden=id!==active);}));
 $('sources').innerHTML=Object.keys(M.sources).map(key=>link(key)).join('');
