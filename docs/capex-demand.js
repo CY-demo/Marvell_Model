@@ -10,9 +10,10 @@ const tr=(a,b)=>'<tr>'+a.map((v,i)=>'<'+(b?'th':'td')+(i>0?' class="num"':'')+'>
 const table=(head,rows,cls='')=>'<div class="table-wrap '+cls+'"><table><thead>'+tr(head,true)+'</thead><tbody>'+rows.map(r=>tr(r)).join('')+'</tbody></table></div>';
 const link=(key,label)=>'<a href="'+M.sources[key].url+'" target="_blank" rel="noopener">'+(label||M.sources[key].title)+'</a>';
 const copy={
+ intro:['預設數值依公開事實推估；你可以在既有公式中修改數值，調整推估結果。','Default values are estimated from publicly available data. You can adjust the inputs in the existing formulas to update the estimates.'],
  title:['Cap 增長範例','Capex growth example'],subtitle:['從投資預算，算到 GPU、自研加速器與 Marvell 產品需求。','Translate investment budgets into GPUs, custom accelerators and Marvell product demand.'],
  date:['資料檢視 2026-11-10','Sources reviewed Nov 10, 2026'],navModel:['需求情境模型','Demand model'],navMap:['產品與供應鏈','Products & supply chain'],navAws:['AWS 公開計畫','AWS public plans'],navCapex:['CapEx 需求推算','Capex demand'],
- company:['公司','Company'],scope:['分析範圍','Scope'],old:['原 CapEx · USD B','Prior capex · USD B'],next:['新 CapEx · USD B','New capex · USD B'],reset:['恢復公司基準','Reset company assumptions'],
+ company:['公司','Company'],scope:['分析範圍','Scope'],old:['原 CapEx · USD B','Prior capex · USD B'],next:['新 CapEx · USD B','New capex · USD B'],reset:['恢復預設基準','Reset default assumptions'],
  allocationTitle:['預算配置','Budget allocation'],judgmentTitle:['這組假設的判斷','Reading this scenario'],tabModel:['推算過程','Calculation'],tabEvidence:['假設與來源','Assumptions & sources'],tabSensitivity:['情境比較','Scenarios'],
  calcTitle:['CapEx → 加速器採購量','Capex → accelerator purchases'],hardwareTitle:['設備需求推估','Estimated hardware demand'],networkTitle:['加速器 → 網路產品','Accelerators → network products'],marvellTitle:['Marvell 產品機會','Marvell product opportunity'],
  crossTitle:['部署速率與預算交叉檢查','Deployment and budget cross-checks'],evidenceTitle:['基準假設如何形成','How the base case is constructed'],sensitivityTitle:['設備配置與平台成本一起比較','Equipment allocation and platform costs'],
@@ -67,7 +68,7 @@ function inputControl(key,id){
 }
 function resetControl(key){
  const field=fields.find(x=>x[0]===key),base=M.companies[company].p[key];
- return '<button class="field-reset" type="button" data-reset-key="'+key+'" aria-label="'+t(field[1]+'：還原公司基準',field[2]+': restore company base')+'">'+t('還原基準 ','Restore ')+f(base,2)+(field[3]==='%'?'%':'')+'</button>';
+ return '<button class="field-reset" type="button" data-reset-key="'+key+'" aria-label="'+t(field[1]+'：還原預設基準',field[2]+': restore default baseline')+'">'+t('還原基準 ','Restore ')+f(base,2)+(field[3]==='%'?'%':'')+'</button>';
 }
 function makeInputs(){
  const opens=[...document.querySelectorAll('#inputs details')].map(e=>e.open);
@@ -87,10 +88,10 @@ function makeWorkbench(){
  gpuMix:[t(...c.mixWhy),c.hardware],
  gpuCost:[t('8-GPU B300 整機參考價 $646,878，折合每 GPU 約 $80,860。規模採購與配置調整係數採 0.74，基準約 $60,000／GPU。','An eight-GPU B300 system reference of $646,878 gives about $80,860 per GPU. A 0.74 procurement/configuration factor anchors the $60,000 base.'),'gpuPrice'],
  asicCost:[t(...c.asicWhy),c.hardware]};
- $('workbench').innerHTML='<div class="work-heading"><div><h2>'+t('看著公式，直接改假設','Follow the formula. Edit each assumption.')+'</h2><p>'+t('白色數字欄可直接輸入。每列右側顯示運算與結果；「還原基準」恢復單項設定。','Type directly into the white number fields. Each row shows the calculation and output. Restore resets one assumption.')+'</p></div><a href="#assumptions">'+t('網路、市佔率與其他參數 ↓','Network, market share and other inputs ↓')+'</a></div><div id="capex-entry" class="capex-entry"></div><div id="live-results" class="live-results" aria-live="polite"></div><div id="work-error" class="work-error" role="status" hidden></div><div class="step-grid-labels"><span>'+t('推算順序與假設依據','Step and rationale')+'</span><span>'+t('你的假設','Your input')+'</span><span>'+t('即時運算結果','Live calculation')+'</span></div><div class="step-rows">'+coreKeys.map((key)=>{
+ $('workbench').innerHTML='<div class="work-heading"><div><h2>'+t('公式如何計算','How the formulas work')+'</h2><p>'+t('白色數字欄可直接輸入。每列右側顯示運算與結果；「還原基準」恢復單項設定。','Type directly into the white number fields. Each row shows the calculation and output. Restore resets one assumption.')+'</p></div><a href="#assumptions">'+t('網路、市佔率與其他參數 ↓','Network, market share and other inputs ↓')+'</a></div><div id="capex-entry" class="capex-entry"></div><div id="live-results" class="live-results" aria-live="polite"></div><div id="work-error" class="work-error" role="status" hidden></div><div class="step-grid-labels"><span>'+t('推算順序與假設依據','Step and rationale')+'</span><span>'+t('你的假設','Your input')+'</span><span>'+t('即時運算結果','Live calculation')+'</span></div><div class="step-rows">'+coreKeys.map((key)=>{
  const field=fields.find(x=>x[0]===key),why=reasons[key];
  return '<div class="step-row" id="step-'+key+'"><div class="step-description"><label for="work-'+key+'">'+t(field[1],field[2])+'</label><p>'+t(field[4],field[5])+'</p><details class="step-source"><summary>'+t('基準值怎麼來','Why this base value')+'</summary><p>'+why[0]+(why[1]?' '+link(why[1],t('查看來源','Source')):'')+'</p></details></div><div class="step-input"><span class="unit">'+field[3]+'</span>'+inputControl(key,'work-'+key)+resetControl(key)+'</div><div class="step-result"><span id="formula-'+key+'"></span><strong id="output-'+key+'"></strong></div></div>';
- }).join('')+'</div><div class="equation-box"><h3>'+t('把整條 GPU 公式接起來','The complete GPU equation')+'</h3><div id="gpu-equation"></div></div><div class="comparison-heading"><h3>'+t('公司基準 vs. 你的試算','Company base vs. your scenario')+'</h3><span id="changes-count"></span></div><div id="base-comparison"></div><div id="changed-inputs" class="changed-inputs"></div>';
+ }).join('')+'</div><div class="equation-box"><h3>'+t('如何計算GPU需求','How GPU demand is calculated')+'</h3><div id="gpu-equation"></div></div><div class="comparison-heading"><h3>'+t('預設基準 vs 調整數值後','Default baseline vs. adjusted values')+'</h3><span id="changes-count"></span></div><div id="base-comparison"></div><div id="changed-inputs" class="changed-inputs"></div>';
 }
 function updateWorkbench(r){
  if(!$('workbench'))return;
@@ -109,12 +110,12 @@ function updateWorkbench(r){
  for(const [key,[formula,result]] of Object.entries(steps)){$('formula-'+key).textContent=formula;$('output-'+key).textContent=result;}
  const delta=(x,y)=>{const d=Math.round(x)-Math.round(y);return(d>0?'+':'')+f(d);};
  const valueDelta=(r.value>b.value?'+':'')+compact(r.value-b.value);
- $('live-results').innerHTML='<div><span>'+t('你的 GPU 推估','Your GPU estimate')+'</span><strong>'+f(r.gpu)+unit+'</strong><small>'+t('較公司基準 ','vs. company base ')+delta(r.gpu,b.gpu)+unit+'</small></div><div><span>'+c.custom+'</span><strong>'+f(r.asic)+unit+'</strong><small>'+t('較公司基準 ','vs. company base ')+delta(r.asic,b.asic)+unit+'</small></div><div><span>'+t('Marvell 晶片金額','Marvell silicon value')+'</span><strong>'+compact(r.value)+'</strong><small>'+t('較公司基準 ','vs. company base ')+valueDelta+'</small></div>';
+ $('live-results').innerHTML='<div><span>'+t('你的 GPU 推估','Your GPU estimate')+'</span><strong>'+f(r.gpu)+unit+'</strong><small>'+t('較預設基準 ','vs. default baseline ')+delta(r.gpu,b.gpu)+unit+'</small></div><div><span>'+c.custom+'</span><strong>'+f(r.asic)+unit+'</strong><small>'+t('較預設基準 ','vs. default baseline ')+delta(r.asic,b.asic)+unit+'</small></div><div><span>'+t('Marvell 晶片金額','Marvell silicon value')+'</span><strong>'+compact(r.value)+'</strong><small>'+t('較預設基準 ','vs. default baseline ')+valueDelta+'</small></div>';
  const factors=[money(r.headline*1e9),...(annual?[]:[f(p.volume,2)+'%']),f(p.dc,2)+'%',f(p.it,2)+'%',f(p.accelerated,2)+'%',f(p.gpuMix,2)+'%'];
  $('gpu-equation').innerHTML='<p>'+t('預算 → 實體採購 → 資料中心 → IT 設備 → 加速運算 → GPU 預算 → GPU 顆數','Budget → hardware volume → datacenter → equipment → accelerated systems → GPU budget → GPU units')+'</p><strong>'+factors.join(' × ')+' ÷ '+money(p.gpuCost)+' = '+f(r.gpu)+unit+'</strong>';
  const changes=Object.keys(c.p).filter(k=>p[k]!==c.p[k]);
- $('changes-count').textContent=changes.length?t('已調整 ','Edited ')+changes.length+t(' 項',' inputs'):t('使用公司基準','Using company base');
- $('base-comparison').innerHTML=table([t('產品','Product'),t('公司基準','Company base'),t('你的試算','Your scenario'),t('差額','Change')],[['GPU',f(b.gpu),f(r.gpu),delta(r.gpu,b.gpu)],[c.custom,f(b.asic),f(r.asic),delta(r.asic,b.asic)],[t('Marvell 晶片金額','Marvell silicon value'),compact(b.value),compact(r.value),valueDelta]],'narrow');
+ $('changes-count').textContent=changes.length?t('已調整 ','Edited ')+changes.length+t(' 項',' inputs'):t('使用預設基準','Using default baseline');
+ $('base-comparison').innerHTML=table([t('產品','Product'),t('預設基準','Default baseline'),t('調整數值後','Adjusted values'),t('差額','Change')],[['GPU',f(b.gpu),f(r.gpu),delta(r.gpu,b.gpu)],[c.custom,f(b.asic),f(r.asic),delta(r.asic,b.asic)],[t('Marvell 晶片金額','Marvell silicon value'),compact(b.value),compact(r.value),valueDelta]],'narrow');
  $('changed-inputs').innerHTML=changes.map(key=>{const field=fields.find(x=>x[0]===key),label=field?t(field[1],field[2]):t(...copy[key]);return '<span>'+label+': '+f(c.p[key],2)+' → <b>'+f(p[key],2)+'</b></span>';}).join('');
  document.querySelectorAll('[data-key]').forEach(e=>e.classList.toggle('edited',p[e.dataset.key]!==c.p[e.dataset.key]));
  document.querySelectorAll('[data-reset-key]').forEach(e=>e.disabled=p[e.dataset.resetKey]===c.p[e.dataset.resetKey]);
@@ -182,7 +183,7 @@ function renderEvidence(c){
  [t('晶片 ASP 與網路成本','Silicon ASP and network costs'),t('工程推估','Engineering estimates'),t('800G／1.6T DSP：$100／$180；AEC DSP：$40；switch ASIC：$3,000；custom compute：$5,000。網路檢核採 800G／1.6T 模組 $1,000／$2,000、交換器 $40,000、AEC $400。可用供應商報價替換。','800G / 1.6T DSP: $100 / $180; AEC DSP: $40; switch ASIC: $3,000; custom compute: $5,000. Network checks use $1,000 / $2,000 optics, $40,000 chassis and $400 AECs. Supplier quotes can replace these inputs.')],
  [t('交換晶片容量','Switch capacity'),t('產品規格','Product specification'),t('Teralynx 10：51.2 Tbps，可提供 64×800G 或 128×400G；基準用 75% 埠容量使用率。','Teralynx 10: 51.2 Tbps, supporting 64×800G or 128×400G; base port-capacity utilization is 75%.')+' '+link('sw',t('產品規格','Product brief'))]
  ];
- $('evidence').innerHTML='<p class="comparison-copy">'+t('公開資料設定金額與硬體規格，推估假設設定採購配置與單價。下表保存公司基準，編輯值會即時更新計算結果。','Public data anchor budgets and hardware specs; estimated inputs set procurement mix and costs. This table records company defaults; edited inputs update the calculations.')+'</p><div class="table-wrap"><table class="evidence-table"><thead><tr><th>'+t('假設','Input')+'</th><th>'+t('依據類型','Basis')+'</th><th>'+t('採用理由與來源','Rationale and source')+'</th></tr></thead><tbody>'+rows.map(row=>'<tr>'+row.map(x=>'<td>'+x+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>';
+ $('evidence').innerHTML='<p class="comparison-copy">'+t('公開資料設定金額與硬體規格，推估假設設定採購配置與單價。下表保存預設基準，編輯值會即時更新計算結果。','Public data anchor budgets and hardware specs; estimated inputs set procurement mix and costs. This table records company defaults; edited inputs update the calculations.')+'</p><div class="table-wrap"><table class="evidence-table"><thead><tr><th>'+t('假設','Input')+'</th><th>'+t('依據類型','Basis')+'</th><th>'+t('採用理由與來源','Rationale and source')+'</th></tr></thead><tbody>'+rows.map(row=>'<tr>'+row.map(x=>'<td>'+x+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>';
 }
 function renderSensitivity(r){
  const cases=M.scenarios(p,mode),names=[t('採購量偏低','Lower unit case'),t('目前基準','Current base'),t('採購量偏高','Higher unit case')];
