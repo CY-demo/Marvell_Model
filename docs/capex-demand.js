@@ -1,7 +1,7 @@
 (function(){
 'use strict';
 const M=window.CapexDemand,$=id=>document.getElementById(id);
-let lang='tw',company='amazon',mode='increment',active='model',p={...M.companies.amazon.p};
+let lang=new URLSearchParams(window.location.search).get('lang')==='en'?'en':'tw',company='amazon',mode='increment',active='model',p={...M.companies.amazon.p};
 const t=(a,b)=>lang==='en'?b:a;
 const f=(n,d=0)=>Number(n).toLocaleString(lang==='en'?'en-US':'zh-TW',{maximumFractionDigits:d});
 const money=n=>(n<0?'−$':'$')+f(Math.abs(n),0);
@@ -126,6 +126,7 @@ function syncInput(key){
 }
 function language(){
  document.documentElement.lang=lang==='en'?'en':'zh-Hant';
+ document.title=t('Cap 增長範例 | Marvell 產品需求推算','Capex growth example | Marvell product demand');
  document.querySelectorAll('[data-t]').forEach(e=>e.textContent=t(...copy[e.dataset.t]));
  document.querySelectorAll('[data-lang]').forEach(e=>e.setAttribute('aria-pressed',String(e.dataset.lang===lang)));
  $('scope').options[0].text=t('CapEx 增額','Capex increase');$('scope').options[1].text=t('最新全年預算','Latest annual budget');
@@ -198,7 +199,7 @@ $('scope').addEventListener('change',()=>{mode=$('scope').value;renderResults();
 $('reset').addEventListener('click',()=>{delete drafts[company];loadCompany();});
 document.addEventListener('input',e=>{const key=e.target.dataset.key;if(!key)return;p[key]=e.target.value===''?NaN:Number(e.target.value);renderResults();});
 document.addEventListener('click',e=>{const reset=e.target.closest('[data-reset-key]');if(reset){const key=reset.dataset.resetKey;p[key]=M.companies[company].p[key];syncInput(key);renderResults();}const open=e.target.closest('[data-open-assumptions]');if(open){const ids=open.dataset.openAssumptions.split(',');ids.forEach(i=>$('group-'+i).open=true);$('group-'+ids[0]).scrollIntoView({block:'start',behavior:'smooth'});}});
-document.querySelectorAll('[data-lang]').forEach(b=>b.addEventListener('click',()=>{lang=b.dataset.lang;language();}));
+document.querySelectorAll('[data-lang]').forEach(b=>b.addEventListener('click',()=>{lang=b.dataset.lang;const url=new URL(window.location.href);url.searchParams.set('lang',lang);window.history.replaceState(null,'',url.href);language();}));
 document.querySelectorAll('[data-panel]').forEach(b=>b.addEventListener('click',()=>{active=b.dataset.panel;document.querySelectorAll('[data-panel]').forEach(x=>x.setAttribute('aria-selected',String(x===b)));['model','evidence','sensitivity'].forEach(id=>$('panel-'+id).hidden=id!==active);}));
 $('sources').innerHTML=Object.keys(M.sources).map(key=>link(key)).join('');
 loadCompany();language();
