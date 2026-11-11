@@ -15,3 +15,50 @@ main{padding-top:25px;padding-bottom:24px}.title-row{display:flex;align-items:ce
 @media(max-width:1000px){header,nav,main{padding-left:24px;padding-right:24px}.top-controls{grid-template-columns:1fr 1fr 1fr 1fr}.top-controls #reset{grid-column:4}.brand span{display:none}.two-col{grid-template-columns:1fr}.fields{grid-template-columns:1fr 1fr}.flow-grid{gap:16px}.title-row{align-items:flex-start}}
 @media(max-width:640px){header,nav,main{padding-left:16px;padding-right:16px}header{min-height:54px}.brand{font-size:13px}.languages button{min-height:38px;padding:6px 8px}nav{gap:18px;font-size:12px}main{padding-top:18px}h1{font-size:24px}.title-row{display:block}.review{display:block;margin-top:8px}.title-row p{font-size:13px}.top-controls{grid-template-columns:1fr 1fr;gap:10px}.top-controls #reset{grid-column:auto;grid-column:1/-1;min-height:44px}.top-controls input,.top-controls select{min-height:44px}.context{line-height:1.8}.context a{margin-left:0;margin-right:10px}.headline{grid-template-columns:1fr 1fr;gap:14px;padding:16px}.metric:first-child{grid-column:1/-1}.metric:first-child strong{font-size:34px}.metric strong{font-size:23px}.metric label{font-size:12px}.overview{grid-template-columns:1fr;gap:20px}.bar-row{grid-template-columns:110px 1fr 76px;gap:8px}.tabs{gap:0;justify-content:space-between}.tabs button{padding:10px;font-size:13px;min-height:44px}.panel{padding:16px}.flow-grid{grid-template-columns:1fr}.fields{grid-template-columns:1fr}.section-head{display:block}.section-head span{display:block;margin-bottom:12px}.sources>div{grid-template-columns:1fr}.table-wrap table{min-width:530px}.table-wrap.narrow table{min-width:360px}td,th{font-size:12px}summary span{display:block;margin-left:0;margin-top:5px}.evidence-table{min-width:600px}h2{font-size:17px}}
 @media(prefers-reduced-motion:reduce){button:active{transform:none}}
+
+/* Formula rows share the current assumptions with the company estimate. */
+.workbench{margin:24px 0 30px;scroll-margin-top:20px}
+.work-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:24px;margin-bottom:14px}
+.work-heading h2{margin-bottom:5px;font-size:21px}
+.work-heading p{font-size:13px;color:var(--muted);margin:0}
+.work-heading>a{font-size:12px;white-space:nowrap;padding-top:6px}
+.live-results{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;background:#e9edf2;padding:12px 18px;border:1px solid var(--rule);border-radius:6px;position:sticky;top:0;z-index:5}
+.live-results span,.live-results small{display:block;font-size:12px;color:var(--muted)}
+.live-results strong{display:inline-block;font-size:20px;line-height:1.5;font-weight:600}
+.step-grid-labels,.step-row{display:grid;grid-template-columns:minmax(200px,1.05fr) 170px minmax(220px,1fr);gap:26px}
+.step-grid-labels{padding:15px 20px 8px;font-size:12px;color:var(--muted)}
+.step-rows{background:white;border:1px solid var(--rule);border-radius:8px;padding:0 20px}
+.step-row{padding:17px 0;border-bottom:1px solid var(--rule);align-items:start}
+.step-row:last-child{border-bottom:0}
+.step-description label{font-size:14px;font-weight:600;cursor:text}
+.step-description>p{font-size:12px;color:var(--muted);margin:4px 0 7px}
+.step-input{display:grid;grid-template-columns:1fr auto;align-items:center;column-gap:8px}
+.step-input input{grid-column:1;grid-row:1;height:42px;font-size:17px;background:#fff}
+.step-input .unit{grid-column:2;grid-row:1;font-size:12px;color:var(--muted)}
+.field-reset{border:0;background:none;min-height:30px;padding:3px 0;text-align:left;font-size:12px;color:#225f8d;width:fit-content;grid-column:1/-1}
+.field-reset:disabled{color:var(--muted);cursor:default}
+.field-reset:hover:enabled{text-decoration:underline}
+.step-result{padding-top:2px;min-width:0}
+.step-result>span{display:block;color:var(--muted);font-size:13px;overflow-wrap:anywhere}
+.step-result>strong{display:block;font-size:21px;font-weight:500;line-height:1.4;margin-top:4px;overflow-wrap:anywhere}
+.step-source{border:0;padding:0;margin:0;border-radius:0;background:none}
+.step-source summary{font-size:12px;font-weight:400;color:#225f8d}
+.step-source p{font-size:12px;margin:8px 0 2px;color:var(--muted)}
+.equation-box{margin:18px 0;padding:16px 20px;background:#e9edf2;border-radius:6px}
+.equation-box h3{margin-bottom:4px}
+.equation-box p{font-size:12px;color:var(--muted);margin:4px 0 10px}
+.equation-box strong{display:block;font-weight:500;font-size:17px;overflow-wrap:anywhere}
+.comparison-heading{display:flex;align-items:baseline;justify-content:space-between;margin:20px 0 4px;gap:16px}
+.comparison-heading h3{margin:0}.comparison-heading>span{font-size:12px;color:var(--muted)}
+#base-comparison{background:white;padding:0 16px;border:1px solid var(--rule);border-radius:6px}
+.changed-inputs{display:flex;gap:8px 18px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:10px}
+.changed-inputs b{font-weight:500;color:var(--ink)}
+.work-error{padding:12px 0;color:#9c2a28}
+.worked-example{padding:12px 0;font-size:15px;font-weight:500}
+#results[data-valid="false"]>.headline,#results[data-valid="false"]>.overview,#results[data-valid="false"]>.tabs,#results[data-valid="false"]>[role="tabpanel"]{display:none}
+#assumptions,details[id^="group-"]{scroll-margin-top:24px}
+@media(max-width:1000px){.work-heading{display:block}.work-heading>a{display:inline-block;margin-top:7px}.step-grid-labels,.step-row{grid-template-columns:minmax(170px,1fr) 140px minmax(150px,1fr);gap:16px}.step-result>strong{font-size:19px}}
+@media(max-width:640px){.work-heading h2{font-size:19px}.step-grid-labels{display:none}.step-rows{padding:0 14px;margin-top:12px}.step-row{grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:12px 18px;padding:16px 0}.step-description{grid-column:1/-1}.step-input{grid-column:1}.step-result{grid-column:2}.step-input input{font-size:16px;min-height:44px}.step-result>strong{font-size:18px}.step-result>span{font-size:12px}.live-results{padding:10px 12px;gap:12px;grid-template-columns:1fr 1fr}.live-results>div:last-child{display:none}.live-results strong{font-size:18px}.live-results small,.live-results span{font-size:11px}.equation-box{padding:14px}.equation-box strong{font-size:15px}.comparison-heading{display:block}.work-heading>a{white-space:normal}.field-reset{min-height:36px}}
+
+
+.capex-entry{font-size:13px;padding:0 0 12px;color:var(--muted)}
